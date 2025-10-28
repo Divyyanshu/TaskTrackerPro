@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react";
-import { ToastContainer } from "react-toastify";
+import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { registerUser } from "../services/authService";
+
 const SignUp = ({ switchForm }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -10,19 +11,80 @@ const SignUp = ({ switchForm }) => {
     password: "",
     confirmPassword: "",
   });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // ---------- Helper: Basic validation ----------
+  const validateForm = () => {
+    const { name, email, password, confirmPassword } = formData;
+
+    if (!name || !email || !password || !confirmPassword) {
+      toast.warning("Please fill in all fields.");
+      console.warn("[VALIDATION FAILED] Missing fields");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address.");
+      console.warn("[VALIDATION FAILED] Invalid email format");
+      return false;
+    }
+
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long.");
+      console.warn("[VALIDATION FAILED] Weak password");
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match!");
+      console.warn("[VALIDATION FAILED] Password mismatch");
+      return false;
+    }
+
+    return true;
+  };
+
+  // ---------- Handle Submit ----------
   async function handleSubmit(e) {
-    e.preventDefault(); // prevent page reload
+    e.preventDefault();
+
+    if (!validateForm()) return;
 
     try {
+      setLoading(true);
+      console.log("[REGISTER ATTEMPT] formData:", formData);
+
       const response = await registerUser(formData);
-      localStorage.setItem(token, response.token);
+      console.log("[REGISTER SUCCESS] Response:", response);
+
+      if (response?.token) {
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("userName", response.userName);
+        toast.success("Registration successful! Redirecting...");
+        setTimeout(() => {
+          window.location.href = "/Dashboard";
+        }, 2000);
+      } else {
+        toast.error("Unexpected response from server.");
+        console.error("[REGISTER ERROR] Invalid response:", response);
+      }
     } catch (err) {
-      console.error("Error registering:", err);
+      console.error("[REGISTER FAILED]", err);
+      const errorMsg =
+        err.response?.data?.message || "Registration failed. Try again.";
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
     }
   }
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-purple-500 to-pink-600 flex items-center justify-center p-4">
-      <ToastContainer />
+    <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center p-4">
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -31,7 +93,7 @@ const SignUp = ({ switchForm }) => {
           <p className="text-gray-600">Join us today!</p>
         </div>
 
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -45,7 +107,7 @@ const SignUp = ({ switchForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                 placeholder="John Doe"
               />
             </div>
@@ -64,7 +126,7 @@ const SignUp = ({ switchForm }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                 placeholder="your@email.com"
               />
             </div>
@@ -78,14 +140,21 @@ const SignUp = ({ switchForm }) => {
             <div className="relative">
               <Lock className="w-5 h-5 absolute left-3 top-3 text-gray-400" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
             </div>
           </div>
 
@@ -97,7 +166,7 @@ const SignUp = ({ switchForm }) => {
             <div className="relative">
               <Lock className="w-5 h-5 absolute left-3 top-3 text-gray-400" />
               <input
-                type="password"
+                type={showConfirm ? "text" : "password"}
                 value={formData.confirmPassword}
                 onChange={(e) =>
                   setFormData({
@@ -105,22 +174,34 @@ const SignUp = ({ switchForm }) => {
                     confirmPassword: e.target.value,
                   })
                 }
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              >
+                {showConfirm ? <EyeOff /> : <Eye />}
+              </button>
             </div>
           </div>
 
-          {/* Submit */}
+          {/* Submit Button */}
           <button
-            onClick={handleSubmit}
-            className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition disabled:bg-purple-300 font-medium"
+            type="submit"
+            disabled={loading}
+            className={`w-full bg-purple-600 text-white py-3 rounded-lg transition font-medium ${
+              loading
+                ? "bg-purple-300 cursor-not-allowed"
+                : "hover:bg-purple-700"
+            }`}
           >
-            Sign Up
+            {loading ? "Creating Account..." : "Sign Up"}
           </button>
-        </div>
+        </form>
 
-        {/* Login Redirect */}
+        {/* Redirect to Login */}
         <div className="mt-6 text-center">
           <p className="text-gray-600 text-sm">
             Already have an account?{" "}
