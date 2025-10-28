@@ -10,6 +10,7 @@ export const registerUser = async (data) => {
 // Login and store token
 export const loginUser = async (data) => {
   const res = await API.post("/users/login", data);
+  console.log("res >>. login" , res)
   if (res.data.token) {
     localStorage.setItem("token", res.data.token);
   }

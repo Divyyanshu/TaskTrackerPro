@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Login from "./pages/Login";
-
 import { isAuth } from "./services/authService"; // adjust path as needed
+import Dashboard from "./pages/DashBoard";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -33,7 +33,7 @@ function App() {
   if (isAuthenticated === true) {
     return (
       <>
-        <div>Hi</div>
+        <Dashboard />
       </>
     );
   }
